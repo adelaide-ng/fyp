@@ -938,7 +938,7 @@ if st.session_state.current_tab == "Predict AQI":
         </div>
         """, unsafe_allow_html=True)
 
-        img_path = Path(__file__).parent / "assets" / "AQI Breakpoints.png"
+        img_path = Path("assets/AQI Breakpoints.png")
         if img_path.exists():
             img = np.array(Image.open(img_path))
             fig = go.Figure(go.Image(z=img))
@@ -1216,7 +1216,7 @@ elif st.session_state.current_tab == "Products":
                 st.write(f"• {item}")
 
 # Footer
-logo_file = Path(__file__).parent / "assets" / "Sustainable_Development_Goal_03GoodHealth.png"
+logo_file = Path("assets/Sustainable_Development_Goal_03GoodHealth.png")
 logo_bytes = logo_file.read_bytes()
 b64 = base64.b64encode(logo_bytes).decode()
 
