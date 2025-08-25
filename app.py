@@ -1216,16 +1216,20 @@ elif st.session_state.current_tab == "Products":
                 st.write(f"• {item}")
 
 # Footer
-st.markdown("---")
-colA, colB = st.columns([1, 9])
-with colA:
-    st.image("assets/Sustainable_Development_Goal_03GoodHealth.png", width=40)
-with colB:
-    st.markdown(
-        "<div style='color:#666;margin-top:6px'>"
-        "<strong>⛅ Air Quality Prediction System</strong><br>"
-        "Built with Streamlit • Data-driven insights for healthier living<br>"
-        "<span style='font-size:0.9rem'>SDG 3: Good Health and Well-being</span>"
-        "</div>",
-        unsafe_allow_html=True
-    )
+logo_file = Path("assets/Sustainable_Development_Goal_03GoodHealth.png")
+logo_bytes = logo_file.read_bytes()
+b64 = base64.b64encode(logo_bytes).decode()
+
+st.markdown(f"""
+---
+<div style="text-align: center; color: #666; margin-top: 2rem;">
+    <p>⛅ Air Quality Prediction System</p>
+    <p>Built with Streamlit • Data-driven insights for healthier living</p>
+    <div style="text-align:center; margin-top:2rem;">
+        <img src="data:image/png;base64,{b64}" width="40" />
+        <span style="font-size:0.9rem; color:#666; margin-left:8px;">
+            SDG 3: Good Health and Well-being
+        </span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
