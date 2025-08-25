@@ -4,3 +4,7 @@ numpy
 joblib
 plotly
 shap
+lightgbm
+scikit-learn
+matplotlib
+seaborn
