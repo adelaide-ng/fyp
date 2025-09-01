@@ -239,7 +239,7 @@ st.markdown("""
 # Load transformers and model
 pt_features = joblib.load('pt_features.pkl')
 pt_target = joblib.load('pt_target.pkl')
-model = joblib.load('lgb_tuned_model_20250722_092150.pkl')
+model = joblib.load('lgb_tuned_model_20250901_105103.pkl')
 
 # Initialize session state
 if 'current_tab' not in st.session_state:
@@ -938,7 +938,7 @@ if st.session_state.current_tab == "Predict AQI":
         </div>
         """, unsafe_allow_html=True)
 
-        img_path = Path("assets/AQI Breakpoints.png")
+        img_path = Path("assets/aqi_breakpoints.png")
         if img_path.exists():
             img = np.array(Image.open(img_path))
             fig = go.Figure(go.Image(z=img))
