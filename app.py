@@ -9,7 +9,7 @@ import shap
 import urllib.parse
 from plotly.subplots import make_subplots
 from pathlib import Path
-from PIL import Image
+from base64 import b64encode
 from streamlit.components.v1 import html
 from datetime import datetime
 import warnings
@@ -938,29 +938,31 @@ if st.session_state.current_tab == "Predict AQI":
         </div>
         """, unsafe_allow_html=True)
 
-        img_path = Path("assets/aqi_breakpoints.png")
+        img_path = Path("assets/aqi_breakpoints.svg")
         if img_path.exists():
-            img = np.array(Image.open(img_path))
-            fig = go.Figure(go.Image(z=img))
-            fig.update_layout(
-                margin=dict(l=0, r=0, t=0, b=0),
-                dragmode="zoom",
-                hovermode=False
+            svg_text = img_path.read_text(encoding="utf-8")
+            b64 = b64encode(svg_text.encode("utf-8")).decode("ascii")
+            st.markdown(
+                f'<img alt="AQI Breakpoints" '
+                f'src="data:image/svg+xml;base64,{b64}" '
+                f'style="max-width:100%; height:auto; display:block;" />',
+                unsafe_allow_html=True
             )
-            fig.update_xaxes(visible=False)
-            fig.update_yaxes(visible=False, scaleanchor="x", scaleratio=1)
-            st.plotly_chart(
-                fig,
-                use_container_width=True,
-                config={
-                    "displayModeBar": True,
-                    "displaylogo": False,
-                    "modeBarButtonsToAdd": ["zoom2d","pan2d","autoScale2d","resetScale2d"]
-                }
-            )
-            st.caption("Tip: Scroll/pinch to zoom • Drag to pan • Double-click to reset")
+            st.caption("""**Note:**\n
+                1. Areas are generally required to report the AQI based on 8-hour ozone values.
+                   However, there are a small number of areas where an AQI based on 1-hour ozone
+                   values would be more precautionary. In these cases, in addition to calculating
+                   the 8-hour ozone index value, the 1-hour ozone value may be calculated, and 
+                   the maximum of the two values reported.\n
+                2. 8-hour O₃ values do not define higher AQI values (≥ 301). AQI values of 301 or
+                   higher are calculated with 1-hour O₃ concentrations.\n
+                3. 1-hour SO₂ values do not define higher AQI values (≥ 200). AQI values of 200 or
+                   greater are calculated with 24-hour SO₂ concentrations.\n
+
+                \nSource: https://air.moenv.gov.tw/airepaEn/EnvTopics/AirQuality_9.aspx
+            """)
         else:
-            st.info("Place *'AQI Breakpoints.jpg'* in the same folder as this app to show the image.")
+            st.info("Place *'assets/aqi_breakpoints.svg'* in the assets folder to show the image.")
 
 
 elif st.session_state.current_tab == "Analytics":
@@ -999,7 +1001,16 @@ elif st.session_state.current_tab == "Analytics":
         col1, col2 = st.columns(2)
 
         with col1:
-            st.subheader("🔎 Feature Importance")
+            st.subheader("🔎 What's Driving The Predicted AQI?")
+            st.markdown("""
+            <div style="background: #f7fafc; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #4299e1;">
+                <p style="margin: 0; color: #2d3748; font-size: 0.9rem;">
+                    <strong>How to read this chart:</strong> Factors with positive values (right) increases AQI, 
+                    and negative values (left) decreases AQI. The longer the bar, the bigger the impact 
+                    on your prediction.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
             fig_bar = px.bar(
                 df_shap,
                 x="shap",
@@ -1015,7 +1026,7 @@ elif st.session_state.current_tab == "Analytics":
                 showlegend=False
             )
             st.plotly_chart(fig_bar, use_container_width=True)
-            st.caption("The graph above shows how much each pollutant affects the AQI prediction.")
+            st.caption("The graph above shows how much each factors affects the AQI prediction.")
 
         with col2:
             st.subheader("🍩 Influence of each input on AQI")
@@ -1048,25 +1059,43 @@ elif st.session_state.current_tab == "Analytics":
             st.caption("*Share is based on |SHAP| (absolute impact) so positives/negatives don’t cancel out.")
 
         # Global Feature Importance for model (not user-input-driven)
-        with st.expander("Global Feature Importance", expanded=False):
+        st.markdown("<br>", unsafe_allow_html=True)  # Add some spacing
+        
+        st.markdown("""
+        <div style="margin-top: 2rem;">
+            <h3 style="color: #2d3748; margin-bottom: 0.5rem;"><strong>Which Pollutants Matter Most Overall?</strong></h3>
+            <p style="color: #4a5568; margin-bottom: 1.5rem;">
+                This shows which air pollutants the AI model considers most important when predicting AQI, 
+                based on patterns it learned from historical data. Unlike the analysis above (which shows 
+                impact for your specific inputs), this reveals the model's overall priorities across all scenarios.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        try:
+            importances = model.feature_importances_
             try:
-                importances = model.feature_importances_
-                try:
-                    feature_names = model.booster_.feature_name()
-                except AttributeError:
-                    feature_names = model.feature_name_
+                feature_names = model.booster_.feature_name()
+            except AttributeError:
+                feature_names = model.feature_name_
 
-                fi_df = pd.DataFrame({
-                    "feature": feature_names,
-                    "display": [FEATURE_LABELS.get(f, f) for f in feature_names],
-                    "importance": importances
-                }).sort_values("importance", ascending=True)
+            fi_df = pd.DataFrame({
+                "feature": feature_names,
+                "display": [FEATURE_LABELS.get(f, f) for f in feature_names],
+                "importance": importances
+            }).sort_values("importance", ascending=True)
 
-                fig_fi = px.bar(fi_df, x="importance", y="display", orientation="h")
-                fig_fi.update_layout(height=420, xaxis_title="Importance", yaxis_title="")
-                st.plotly_chart(fig_fi, use_container_width=True)
-            except Exception as e:
-                st.warning(f"Could not read model feature importances: {e}")
+            fig_fi = px.bar(fi_df, x="importance", y="display", orientation="h")
+            fig_fi.update_layout(
+                height=420, 
+                xaxis_title="Overall Importance", 
+                yaxis_title="",
+                title=""
+            )
+            st.plotly_chart(fig_fi, use_container_width=True)
+            st.caption("*Higher values indicate pollutants that more frequently drive AQI predictions in the model training.")
+        except Exception as e:
+            st.warning(f"Could not read model feature importances: {e}")
 
 
 elif st.session_state.current_tab == "Learn/Contact":
